@@ -43,14 +43,8 @@ Giải pháp thiết bị biên, ứng dụng hệ điều hành thời gian th�
 | **Mạch công suất** | Cầu H DRV8833 | Băm xung PWM 18 kHz, độ phân giải 12-bit (0 - 4095) |
 | **Cơ cấu chấp hành** | Sò nóng lạnh peltier (TEC) | Điện áp 5V, kết hợp quạt và khối nhôm tản nhiệt |
 
-### 2. Sơ đồ chân GPIO (Pinout Mapping)
-| Ngoại vi | Tín hiệu | Chân ESP32-S3 | Mô tả kết nối |
-| :--- | :--- | :---: | :--- |
-| **SHT31 Sensor** | `SDA` | **GPIO 8** | Đường dữ liệu I2C (`I2C_NUM_0`) |
-| **SHT31 Sensor** | `SCL` | **GPIO 9** | Đường xung nhịp I2C (`I2C_NUM_0`) |
-| **DRV8833 Driver** | `IN1` (COOL) | **GPIO 4** | Kênh PWM 0 (`LEDC_CHANNEL_0`) - Chế độ làm lạnh |
-| **DRV8833 Driver** | `IN2` (HEAT) | **GPIO 5** | Kênh PWM 1 (`LEDC_CHANNEL_1`) - Chế độ làm nóng |
-
+### 2. Schematic kết nối phần cứng
+![Schematic](img/schematic.png)
 ---
 
 ## Kiến trúc Phần mềm
@@ -71,28 +65,7 @@ Hệ thống được thiết kế theo mô hình phân lớp gồm 6 tầng đ�
 
 ---
 
-## Cấu trúc Thư mục
-
-```text
-Temp_Control/
-├── .devcontainer/          # Cấu hình môi trường Docker & QEMU cho VS Code
-├── components/
-│   └── ssd1306/            # Thư viện driver màn hình OLED SSD1306/SH1106 (I2C/SPI)
-├── img/
-│   └── hardware_setup.png  # Hình ảnh lắp đặt phần cứng thực tế
-├── main/
-│   ├── CMakeLists.txt      # Khai báo các module phụ thuộc cho nhánh main
-│   ├── idf_component.yml   # Quản lý thư viện espressif/mqtt
-│   ├── Kconfig.projbuild   # Menu cấu hình MQTT Broker & Topics
-│   └── main.c              # Mã nguồn chính (PID, SHT31, DRV8833, MQTT, FreeRTOS)
-├── CMakeLists.txt          # CMake cấu hình toàn dự án
-├── sdkconfig.defaults      # Các thiết lập mặc định cho target ESP32-S3
-└── README.md               # Tài liệu hướng dẫn dự án
-```
-
----
-
-## Hướng dẫn Cài đặt & Biên dịch
+## Hướng dẫn cài đặt & biên dịch
 
 ### 1. Yêu cầu hệ thống
 * **ESP-IDF:** Phiên bản `v5.x` hoặc `v6.x` (Hỗ trợ mở trực tiếp qua Docker Container với `.devcontainer`).
@@ -109,7 +82,7 @@ idf.py menuconfig
   * `MQTT Publish Topic` (Mặc định: `hethong/temp_control`)
   * `MQTT Subscribe Topic` (Mặc định: `hethong/set_from_web`)
 
-### 3. Biên dịch, Nạp code và Giám sát Log
+### 3. Biên dịch, nạp code và giám sát Log
 ```bash
 # Biên dịch toàn bộ dự án
 idf.py build
@@ -120,7 +93,7 @@ idf.py -p COMx flash monitor
 
 ---
 
-## Đặc tả Giao thức MQTT
+## Giao thức MQTT
 
 | Chiều dữ liệu | Topic Mặc định | QoS | Định dạng Payload | Mô tả chi tiết |
 | :--- | :--- | :-: | :--- | :--- |
