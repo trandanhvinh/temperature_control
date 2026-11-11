@@ -1,83 +1,158 @@
-Hệ thống Điều khiển Nhiệt độ IoT (IoT Temperature Control System)
+# 🌡️ Hệ thống Điều khiển Nhiệt độ IoT (IoT Temperature Control System)
 
-Giới thiệu tổng quan
+![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.x%20%7C%20v6.x-blue?logo=espressif)
+![MCU](https://img.shields.io/badge/MCU-ESP32--S3-red?logo=espressif)
+![RTOS](https://img.shields.io/badge/OS-FreeRTOS-green)
+![Protocol](https://img.shields.io/badge/Protocol-MQTT%20(QoS%201)-orange)
+![VPN](https://img.shields.io/badge/Network-Tailscale%20Mesh%20VPN-informational)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-Dự án Thiết kế hệ thống giám sát và điều khiển nhiệt độ IoT là một giải pháp thiết bị biên (Edge Device) hoạt động theo kiến trúc Headless. Hệ thống ứng dụng nhân hệ điều hành thời gian thực FreeRTOS trên vi điều khiển ESP32-S3 để xử lý thuật toán PID rời rạc. Kết hợp với hạ tầng mạng riêng ảo (Mesh VPN) thông qua nền tảng Tailscale, dự án cho phép giám sát và cấu hình từ xa an toàn qua Internet mà không cần can thiệp mở cổng (Port Forwarding) trên Router vật lý.
+Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến trúc **Headless**, ứng dụng hệ điều hành thời gian thực **FreeRTOS** trên vi điều khiển **ESP32-S3** để thực thi thuật toán điều khiển **PID rời rạc** hai chiều (Làm nóng / Làm lạnh) với sò nhiệt Peltier. Kết hợp cùng hạ tầng mạng riêng ảo (**Mesh VPN**) qua **Tailscale**, hệ thống cho phép giám sát và điều chỉnh nhiệt độ từ xa qua Internet an toàn mà không cần mở cổng (Port Forwarding) trên Router vật lý.
 
-Tính năng nổi bật
+---
 
-Điều khiển thời gian thực đa lõi (Real-time Multicore Control): Tận dụng cấu trúc 2 lõi CPU của ESP32-S3. Core 0 được ghim cố định cho tác vụ MQTT và Telemetry để xử lý truyền thông, trong khi Core 1 chuyên trách thuật toán PID và đọc cảm biến để đảm bảo độ trễ tối thiểu cho vòng lặp điều khiển nhiệt độ.
+## 📸 Mô hình Phần cứng
 
-Tối ưu hóa điều khiển (Optimized Logic): Hệ thống kết hợp thuật toán PID rời rạc với logic vùng biên để tự động điều chỉnh công suất và đảo chiều dòng điện. Đồng thời, chỉ trích xuất dữ liệu nhiệt độ từ cảm biến SHT31 nhằm tối ưu hóa tốc độ xử lý.
+![Hardware Setup](img/hardware_setup.png)
 
-Bảo vệ phần cứng bất đồng bộ (Non-blocking Hardware Protection): Tích hợp cơ chế đếm lùi an toàn ngắt điện áp tải và chờ 5 giây trước khi lật trạng thái NÓNG/LẠNH để chống sốc nhiệt sò Peltier mà không làm nghẽn (block) luồng truyền thông MQTT.
+---
 
-Truyền thông phi tập trung (Decentralized Comms): Giao thức MQTT được thiết lập mức chất lượng dịch vụ QoS 1, đảm bảo gói tin điều khiển (Setpoint) và dữ liệu giám sát được truyền tải tin cậy ngay cả khi mạng chập chờn.
+## ✨ Tính năng Nổi bật
 
-Xuyên thấu NAT & Bảo mật (NAT Traversal): Sử dụng Tailscale (dựa trên nền tảng giao thức mã hóa WireGuard) cài đặt trên Raspberry Pi, cung cấp IP ảo tĩnh (100.x.x.x) để quản trị an toàn từ mọi nơi.
+* **⚡ Điều khiển thời gian thực đa lõi (Real-time Multicore Control):** Tối ưu hóa kiến trúc 2 nhân Xtensa LX7 của ESP32-S3:
+  * **Core 0 (`Task_Telemetry` & `MQTT_Event`):** Chuyên trách kết nối mạng Wi-Fi, duy trì phiên MQTT và đóng gói chuỗi JSON gửi dữ liệu định kỳ.
+  * **Core 1 (`Task_Control`):** Độc lập đọc cảm biến SHT31 qua I2C và tính toán vòng lặp điều khiển PID với chu kỳ lấy mẫu cố định ($\Delta t = 1.0\text{s}$), đảm bảo không bị trễ nhịp bởi tác vụ mạng.
+* **🎯 Thuật toán PID lai vùng biên (Hybrid Zone PID):**
+  * **Ngoài ngưỡng sai số $\pm 2.0^\circ\text{C}$:** Kích hoạt công suất tối đa ($\pm 4095$) và xóa tích phân để tăng tốc độ đáp ứng nhiệt.
+  * **Trong ngưỡng $\pm 2.0^\circ\text{C}$:** Chuyển sang điều khiển PID mịn kết hợp cơ chế **Anti-windup** (giới hạn khâu tích phân trong khoảng $[-200, 200]$) và tự động reset tích phân khi nhiệt độ vượt qua điểm đặt (**Zero-crossing reset**).
+* **🛡️ Bảo vệ phần cứng bất đồng bộ (Non-blocking Protection):**
+  * **Chống sốc nhiệt đảo chiều:** Tự động ngắt PWM và đếm lùi an toàn **5 giây** (`REVERSAL_PROTECT_TICKS`) trước khi đảo chiều dòng điện giữa hai trạng thái **NÓNG (HEAT) $\leftrightarrow$ LẠNH (COOL)** mà không gây nghẽn (block) luồng truyền thông.
+  * **Cơ chế Fail-safe cảm biến:** Tự động cắt tải PWM về `0` và xóa lỗi tích phân ngay lập tức nếu giao tiếp I2C với cảm biến SHT31 bị gián đoạn.
+* **🔒 Truyền thông tin cậy & Xuyên thấu NAT:** Sử dụng giao thức MQTT với mức **QoS 1** chạy trên nền tảng **Tailscale VPN** (giao thức WireGuard), cấp phát địa chỉ IP tĩnh nội bộ (`100.x.x.x`) cho IoT Gateway.
 
-Cấu trúc Phần cứng
+---
 
-Vi điều khiển trung tâm (MCU): ESP32-S3 DevKit (I2C: SDA=GPIO8, SCL=GPIO9; PWM: COOL=GPIO4, HEAT=GPIO5)
+## 🔧 Cấu trúc Phần cứng & Sơ đồ Đấu nối
 
-Máy chủ (IoT Gateway): Raspberry Pi 4 (Chạy Mosquitto Broker & Node-RED)
+### 1. Danh mục linh kiện
+| Thành phần | Thiết bị / Module | Thông số / Vai trò |
+| :--- | :--- | :--- |
+| **Vi điều khiển (MCU)** | ESP32-S3 DevKit | Dual-core 240MHz, tích hợp Wi-Fi |
+| **IoT Gateway** | Raspberry Pi 4 | Chạy Mosquitto MQTT Broker, Node-RED & Tailscale |
+| **Cảm biến nhiệt độ** | SHT31 | Giao tiếp I2C (Địa chỉ `0x44`, tốc độ `100 kHz`) |
+| **Mạch công suất** | Cầu H DRV8833 | Băm xung PWM `18 kHz`, độ phân giải `12-bit` (`0 - 4095`) |
+| **Cơ cấu chấp hành** | Sò nóng lạnh Peltier (TEC) | Điện áp 5V, kết hợp quạt và khối nhôm tản nhiệt |
 
-Cảm biến (Sensor): SHT31 (Giao tiếp I2C ở địa chỉ 0x44)
+### 2. Sơ đồ chân GPIO (Pinout Mapping)
+| Ngoại vi | Tín hiệu | Chân ESP32-S3 | Mô tả kết nối |
+| :--- | :--- | :---: | :--- |
+| **SHT31 Sensor** | `SDA` | **GPIO 8** | Đường dữ liệu I2C (`I2C_NUM_0`) |
+| **SHT31 Sensor** | `SCL` | **GPIO 9** | Đường xung nhịp I2C (`I2C_NUM_0`) |
+| **DRV8833 Driver** | `IN1` (COOL) | **GPIO 4** | Kênh PWM 0 (`LEDC_CHANNEL_0`) - Chế độ làm lạnh |
+| **DRV8833 Driver** | `IN2` (HEAT) | **GPIO 5** | Kênh PWM 1 (`LEDC_CHANNEL_1`) - Chế độ làm nóng |
 
-Động cơ chấp hành (Actuator): Sò nóng lạnh Peltier (TEC) 5V kết hợp hệ thống quạt và nhôm tản nhiệt
+---
 
-IC Công suất (Driver): Mạch cầu H DRV8833 (Nhận tín hiệu băm xung PWM ở tần số 18kHz, độ phân giải 12-bit để điều tiết dòng cho sò Peltier)
+## 🏗️ Kiến trúc Phần mềm
 
-Cấu trúc Phần mềm
+Hệ thống được thiết kế theo mô hình phân lớp (**Layered Architecture**) gồm 6 tầng độc lập:
 
-Hệ thống được thiết kế theo mô hình phân lớp (Layered Architecture) gồm 6 tầng rõ rệt:
+```text
++-------------------------------------------------------------------+
+| 6. Cloud / Backend : Node-RED Dashboard, Mosquitto, Tailscale VPN |
++-------------------------------------------------------------------+
+| 5. Communication   : Wi-Fi Stack, ESP-MQTT Client, JSON Parser    |
++-------------------------------------------------------------------+
+| 4. Application     : Hybrid PID Controller, Thermal State Machine |
++-------------------------------------------------------------------+
+| 3. RTOS            : FreeRTOS Dual-Core Task Scheduling           |
+|                      [Core 0: Telemetry/MQTT]  [Core 1: PID Loop] |
++-------------------------------------------------------------------+
+| 2. HAL             : ESP-IDF Drivers (I2C Master, LEDC PWM 12-bit)|
++-------------------------------------------------------------------+
+| 1. Hardware        : ESP32-S3, SHT31, DRV8833, Peltier TEC        |
++-------------------------------------------------------------------+
+```
 
-Hardware: Lớp linh kiện vật lý (ESP32-S3, SHT31, DRV8833, Peltier).
+### Thông số bộ điều khiển PID mặc định
+Được cấu hình trực tiếp trong `main/main.c`:
+* Hệ số tỉ lệ ($K_p$): `2000.0`
+* Hệ số tích phân ($K_i$): `25.0`
+* Hệ số vi phân ($K_d$): `5.0`
+* Nhiệt độ đặt mặc định (`Setpoint`): `30.0 °C` (Dải cho phép điều chỉnh: `10.0 °C` – `40.0 °C`)
+* Dải đầu ra PWM: `[-4095, +4095]`
 
-HAL: Lớp trừu tượng hóa phần cứng (ESP-IDF I2C & LEDC PWM).
+---
 
-RTOS: Nhân FreeRTOS quản lý đa nhiệm đa lõi (Task_Control trên Core 1 & Task_Telemetry / MQTT_Event_Task trên Core 0).
+## 📂 Cấu trúc Thư mục
 
-Application: Xử lý thuật toán điều khiển PID và máy trạng thái bảo vệ đảo chiều nhiệt.
+```text
+Temp_Control/
+├── .devcontainer/          # Cấu hình môi trường Docker & QEMU cho VS Code
+├── components/
+│   └── ssd1306/            # Thư viện driver màn hình OLED SSD1306/SH1106 (I2C/SPI)
+├── img/
+│   └── hardware_setup.png  # Hình ảnh lắp đặt phần cứng thực tế
+├── main/
+│   ├── CMakeLists.txt      # Khai báo các module phụ thuộc cho nhánh main
+│   ├── idf_component.yml   # Quản lý thư viện espressif/mqtt
+│   ├── Kconfig.projbuild   # Menu cấu hình MQTT Broker & Topics
+│   └── main.c              # Mã nguồn chính (PID, SHT31, DRV8833, MQTT, FreeRTOS)
+├── CMakeLists.txt          # CMake cấu hình toàn dự án
+├── sdkconfig.defaults      # Các thiết lập mặc định cho target ESP32-S3
+└── README.md               # Tài liệu hướng dẫn dự án
+```
 
-Communication: Ngăn xếp Wi-Fi và MQTT Client đóng gói JSON.
+---
 
-Cloud / Backend: Máy chủ Node-RED, Mosquitto Broker và Tailscale VPN.
+## 🚀 Hướng dẫn Cài đặt & Biên dịch
 
-Hướng dẫn Cài đặt & Biên dịch
+### 1. Yêu cầu hệ thống
+* **ESP-IDF:** Phiên bản `v5.x` hoặc `v6.x` (Hỗ trợ mở trực tiếp qua Docker Container với `.devcontainer`).
+* **MQTT Broker:** Mosquitto đang hoạt động trên Raspberry Pi hoặc máy chủ có cài đặt Tailscale.
 
-1. Yêu cầu hệ thống
-
-ESP-IDF: Phiên bản v5.x hoặc v6.x (hỗ trợ sẵn môi trường Docker qua .devcontainer).
-
-MQTT Broker: Mosquitto chạy trên Raspberry Pi hoặc máy chủ nội bộ/Tailscale.
-
-2. Cấu hình thông số mạng & MQTT
-
-Mở trình cấu hình ESP-IDF để điền SSID/Password Wi-Fi và địa chỉ MQTT Broker (thay vì sửa trực tiếp vào mã nguồn):
-
+### 2. Thiết lập mạng Wi-Fi & MQTT
+Mở giao diện cấu hình của ESP-IDF từ terminal:
+```bash
 idf.py menuconfig
+```
+* **Cấu hình Wi-Fi:** Truy cập `Example Connection Configuration` $\rightarrow$ Điền **WiFi SSID** và **WiFi Password**.
+* **Cấu hình MQTT:** Truy cập `Temp Control System Configuration` $\rightarrow$ Chỉnh sửa:
+  * `MQTT Broker URL` (Mặc định: `mqtt://100.64.0.1:1883`)
+  * `MQTT Publish Topic` (Mặc định: `hethong/temp_control`)
+  * `MQTT Subscribe Topic` (Mặc định: `hethong/set_from_web`)
 
-
-Cấu hình Wi-Fi tại: Example Connection Configuration -> WiFi SSID / WiFi Password.
-
-Cấu hình MQTT tại: Temp Control System Configuration -> MQTT Broker URL (ví dụ: mqtt://100.64.0.1:1883).
-
-3. Biên dịch và Nạp chương trình
-
+### 3. Biên dịch, Nạp code và Giám sát Log
+```bash
+# Biên dịch toàn bộ dự án
 idf.py build
-idf.py -p <PORT> flash monitor
 
+# Nạp chương trình vào ESP32-S3 và mở Serial Monitor (thay COMx bằng cổng thực tế)
+idf.py -p COMx flash monitor
+```
 
-4. Cấu trúc Topic MQTT
+---
 
-hethong/temp_control: ESP32 publish dữ liệu giám sát định kỳ với chu kỳ 1 giây/lần theo định dạng JSON:
+## 📡 Đặc tả Giao thức MQTT
 
-{"temp": 28.45, "set": 30.0, "pwm": 3100, "mode": "HEAT"}
+| Chiều dữ liệu | Topic Mặc định | QoS | Định dạng Payload | Mô tả chi tiết |
+| :--- | :--- | :-: | :--- | :--- |
+| **Publish** *(ESP32 $\rightarrow$ Broker)* | `hethong/temp_control` | `1` | JSON | Gửi dữ liệu giám sát mỗi **1 giây/lần**. Trạng thái `mode` gồm: `"HEAT"`, `"COOL"`, hoặc `"OFF"`. |
+| **Subscribe** *(Web $\rightarrow$ ESP32)* | `hethong/set_from_web` | `1` | Chuỗi số thực (`float`) | Nhận giá trị nhiệt độ mục tiêu từ Web Dashboard (Hợp lệ từ `10.0` đến `40.0`, độ lệch tối thiểu `> 0.1 °C`). |
 
+**Ví dụ bản tin JSON Telemetry (`hethong/temp_control`):**
+```json
+{
+  "temp": 28.45,
+  "set": 30.0,
+  "pwm": 3100,
+  "mode": "HEAT"
+}
+```
 
-hethong/set_from_web: ESP32 subscribe để lắng nghe sự kiện thay đổi Setpoint (giá trị từ 10.0 đến 40.0 °C) từ người dùng thao tác qua Web Dashboard.
+**Ví dụ bản tin cài đặt Setpoint (`hethong/set_from_web`):**
+```text
+26.5
+```
 
-Giấy phép (License)
-
-Dự án được phân phối dưới giấy phép MIT License.
+---
