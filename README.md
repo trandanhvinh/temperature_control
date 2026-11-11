@@ -7,7 +7,7 @@
 ![VPN](https://img.shields.io/badge/Network-Tailscale%20Mesh%20VPN-informational)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến trúc **Headless**, ứng dụng hệ điều hành thời gian thực **FreeRTOS** trên vi điều khiển **ESP32-S3** để thực thi thuật toán điều khiển **PID rời rạc** hai chiều (Làm nóng / Làm lạnh) với sò nhiệt Peltier. Kết hợp cùng hạ tầng mạng riêng ảo (**Mesh VPN**) qua **Tailscale**, hệ thống cho phép giám sát và điều chỉnh nhiệt độ từ xa qua Internet an toàn mà không cần mở cổng (Port Forwarding) trên Router vật lý.
+Giải pháp thiết bị biên, ứng dụng hệ điều hành thời gian thực FreeRTOS trên vi điều khiển ESP32-S3 để thực thi thuật toán điều khiển PID hai chiều (làm nóng / làm lạnh) với sò nhiệt peltier. Kết hợp cùng hạ tầng mạng riêng ảo (Mesh VPN) thông qua dịch vụ Tailscale, hệ thống cho phép giám sát và điều chỉnh nhiệt độ từ xa qua internet mà không cần mở cổng Port Forwarding trên router vật lý.
 
 ---
 
@@ -17,18 +17,18 @@ Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến tr�
 
 ---
 
-## Tính năng Nổi bật
+## Tính năng nổi bật
 
-* **Điều khiển thời gian thực đa lõi (Real-time Multicore Control):** Tối ưu hóa kiến trúc 2 nhân Xtensa LX7 của ESP32-S3:
-  * **Core 0 (`Task_Telemetry` & `MQTT_Event`):** Chuyên trách kết nối mạng Wi-Fi, duy trì phiên MQTT và đóng gói chuỗi JSON gửi dữ liệu định kỳ.
-  * **Core 1 (`Task_Control`):** Độc lập đọc cảm biến SHT31 qua I2C và tính toán vòng lặp điều khiển PID với chu kỳ lấy mẫu cố định ($\Delta t = 1.0\text{s}$), đảm bảo không bị trễ nhịp bởi tác vụ mạng.
-* **Thuật toán PID lai vùng biên (Hybrid Zone PID):**
-  * **Ngoài ngưỡng sai số $\pm 2.0^\circ\text{C}$:** Kích hoạt công suất tối đa ($\pm 4095$) và xóa tích phân để tăng tốc độ đáp ứng nhiệt.
-  * **Trong ngưỡng $\pm 2.0^\circ\text{C}$:** Chuyển sang điều khiển PID mịn kết hợp cơ chế **Anti-windup** (giới hạn khâu tích phân trong khoảng $[-200, 200]$) và tự động reset tích phân khi nhiệt độ vượt qua điểm đặt (**Zero-crossing reset**).
-* **🛡️ Bảo vệ phần cứng bất đồng bộ (Non-blocking Protection):**
-  * **Chống sốc nhiệt đảo chiều:** Tự động ngắt PWM và đếm lùi an toàn **5 giây** (`REVERSAL_PROTECT_TICKS`) trước khi đảo chiều dòng điện giữa hai trạng thái **NÓNG (HEAT) $\leftrightarrow$ LẠNH (COOL)** mà không gây nghẽn (block) luồng truyền thông.
-  * **Cơ chế Fail-safe cảm biến:** Tự động cắt tải PWM về `0` và xóa lỗi tích phân ngay lập tức nếu giao tiếp I2C với cảm biến SHT31 bị gián đoạn.
-* **Truyền thông tin cậy & Xuyên thấu NAT:** Sử dụng giao thức MQTT với mức **QoS 1** chạy trên nền tảng **Tailscale VPN** (giao thức WireGuard), cấp phát địa chỉ IP tĩnh nội bộ (`100.x.x.x`) cho IoT Gateway.
+* **Điều khiển thời gian thực đa lõi:** Tối ưu hóa kiến trúc 2 nhân Xtensa LX7 của ESP32-S3:
+  * **Core 0 (`Task_Telemetry` & `MQTT_Event`):** Phụ trách kết nối với mạng Wi-Fi, duy trì phiên MQTT và đóng gói chuỗi JSON gửi dữ liệu định kỳ.
+  * **Core 1 (`Task_Control`):** Đọc cảm biến SHT31 qua giao thức I2C và tính toán vòng lặp điều khiển PID với chu kỳ lấy mẫu cố định ($\Delta t = 1.0\text{s}$), giúp giảm thiểu trễ nhịp bởi tác vụ mạng.
+* **Thuật toán PID vùng biên:**
+  * **Ngoài ngưỡng sai số $\pm 2.0^\circ\text{C}$:** Hệ thống sẽ kích hoạt công suất tối đa ($\pm 4095$) và xóa tích phân để tăng tốc độ đáp ứng nhiệt.
+  * **Trong ngưỡng $\pm 2.0^\circ\text{C}$:** Chuyển sang điều khiển PID kết hợp cơ chế **Anti-windup** (giới hạn khâu tích phân trong khoảng $[-200, 200]$) và tự động reset tích phân khi nhiệt độ vượt qua điểm mong muốn.
+* **Bảo vệ phần cứng bất đồng bộ:**
+  * **Chống sốc nhiệt đảo chiều:** Tự động ngắt PWM và đếm lùi an toàn trong giới hạn 5 giây trước khi mạch cầu H băm xung đảo chiều dòng điện giữa hai trạng thái NÓNG (HEAT) $\leftrightarrow$ LẠNH (COOL) mà không gây nghẽn luồng truyền thông.
+  * **Cơ chế an toàn cho cảm biến:** Tự động giảm PWM về 0 và xóa lỗi tích phân ngay khi giao tiếp I2C với cảm biến SHT31 bị gián đoạn.
+* **Truyền thông tin cậy & NAT:** Sử dụng giao thức MQTT với mức QoS 1 chạy trên dịch vụ nền tảng Tailscale VPN (giao thức WireGuard), cấp phát địa chỉ IP tĩnh nội bộ (100.x.x.x) cho IoT Gateway.
 
 ---
 
@@ -39,9 +39,9 @@ Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến tr�
 | :--- | :--- | :--- |
 | **Vi điều khiển (MCU)** | ESP32-S3 DevKit | Dual-core 240MHz, tích hợp Wi-Fi |
 | **IoT Gateway** | Raspberry Pi 4 | Chạy Mosquitto MQTT Broker, Node-RED & Tailscale |
-| **Cảm biến nhiệt độ** | SHT31 | Giao tiếp I2C (Địa chỉ `0x44`, tốc độ `100 kHz`) |
-| **Mạch công suất** | Cầu H DRV8833 | Băm xung PWM `18 kHz`, độ phân giải `12-bit` (`0 - 4095`) |
-| **Cơ cấu chấp hành** | Sò nóng lạnh Peltier (TEC) | Điện áp 5V, kết hợp quạt và khối nhôm tản nhiệt |
+| **Cảm biến nhiệt độ** | SHT31 | Giao tiếp I2C (Địa chỉ `0x44`, tốc độ 100 kHz) |
+| **Mạch công suất** | Cầu H DRV8833 | Băm xung PWM 18 kHz, độ phân giải 12-bit (0 - 4095) |
+| **Cơ cấu chấp hành** | Sò nóng lạnh peltier (TEC) | Điện áp 5V, kết hợp quạt và khối nhôm tản nhiệt |
 
 ### 2. Sơ đồ chân GPIO (Pinout Mapping)
 | Ngoại vi | Tín hiệu | Chân ESP32-S3 | Mô tả kết nối |
@@ -55,32 +55,19 @@ Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến tr�
 
 ## Kiến trúc Phần mềm
 
-Hệ thống được thiết kế theo mô hình phân lớp (**Layered Architecture**) gồm 6 tầng độc lập:
+Hệ thống được thiết kế theo mô hình phân lớp gồm 6 tầng độc lập:
 
-```text
-+-------------------------------------------------------------------+
-| 6. Cloud / Backend : Node-RED Dashboard, Mosquitto, Tailscale VPN |
-+-------------------------------------------------------------------+
-| 5. Communication   : Wi-Fi Stack, ESP-MQTT Client, JSON Parser    |
-+-------------------------------------------------------------------+
-| 4. Application     : Hybrid PID Controller, Thermal State Machine |
-+-------------------------------------------------------------------+
-| 3. RTOS            : FreeRTOS Dual-Core Task Scheduling           |
-|                      [Core 0: Telemetry/MQTT]  [Core 1: PID Loop] |
-+-------------------------------------------------------------------+
-| 2. HAL             : ESP-IDF Drivers (I2C Master, LEDC PWM 12-bit)|
-+-------------------------------------------------------------------+
-| 1. Hardware        : ESP32-S3, SHT31, DRV8833, Peltier TEC        |
-+-------------------------------------------------------------------+
+```
+!(img/architecture.png)
 ```
 
 ### Thông số bộ điều khiển PID mặc định
 Được cấu hình trực tiếp trong `main/main.c`:
-* Hệ số tỉ lệ ($K_p$): `2000.0`
-* Hệ số tích phân ($K_i$): `25.0`
-* Hệ số vi phân ($K_d$): `5.0`
-* Nhiệt độ đặt mặc định (`Setpoint`): `30.0 °C` (Dải cho phép điều chỉnh: `10.0 °C` – `40.0 °C`)
-* Dải đầu ra PWM: `[-4095, +4095]`
+* Hệ số tỉ lệ ($K_p$): 2000.0
+* Hệ số tích phân ($K_i$): 25.0
+* Hệ số vi phân ($K_d$): 5.0
+* Nhiệt độ đặt mặc định (Setpoint): 30.0 °C (Dải cho phép điều chỉnh: 10.0 °C – 40.0 °C)
+* Dải đầu ra PWM: [-4095, +4095]
 
 ---
 
@@ -127,7 +114,7 @@ idf.py menuconfig
 # Biên dịch toàn bộ dự án
 idf.py build
 
-# Nạp chương trình vào ESP32-S3 và mở Serial Monitor (thay COMx bằng cổng thực tế)
+# Nạp chương trình vào ESP32-S3 và mở Serial Monitor (thay COMx bằng cổng thực tế trên máy bạn)
 idf.py -p COMx flash monitor
 ```
 
@@ -137,8 +124,8 @@ idf.py -p COMx flash monitor
 
 | Chiều dữ liệu | Topic Mặc định | QoS | Định dạng Payload | Mô tả chi tiết |
 | :--- | :--- | :-: | :--- | :--- |
-| **Publish** *(ESP32 $\rightarrow$ Broker)* | `hethong/temp_control` | `1` | JSON | Gửi dữ liệu giám sát mỗi **1 giây/lần**. Trạng thái `mode` gồm: `"HEAT"`, `"COOL"`, hoặc `"OFF"`. |
-| **Subscribe** *(Web $\rightarrow$ ESP32)* | `hethong/set_from_web` | `1` | Chuỗi số thực (`float`) | Nhận giá trị nhiệt độ mục tiêu từ Web Dashboard (Hợp lệ từ `10.0` đến `40.0`, độ lệch tối thiểu `> 0.1 °C`). |
+| **Publish** *(ESP32 -> Broker)* | `hethong/temp_control` | 1 | JSON | Gửi dữ liệu giám sát mỗi 1s/lần. Trạng thái `mode` gồm: "HEAT", "COOL" hoặc "OFF". |
+| **Subscribe** *(Web -> ESP32)* | `hethong/set_from_web` | 1 | Chuỗi số thực (`float`) | Nhận giá trị nhiệt độ mục tiêu từ dashboard trên web (trong khoảng [10.0 - 40.0], với độ lệch tối thiểu > 0.1 °C). |
 
 **Ví dụ bản tin JSON Telemetry (`hethong/temp_control`):**
 ```json
