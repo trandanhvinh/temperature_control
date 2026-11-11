@@ -1,0 +1,16 @@
+# Target Configuration
+CONFIG_IDF_TARGET="esp32s3"
+
+# Flash Configuration
+CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# Example Connection Configuration (Override in local menuconfig)
+CONFIG_EXAMPLE_CONNECT_WIFI=y
+CONFIG_EXAMPLE_WIFI_SSID="myssid"
+CONFIG_EXAMPLE_WIFI_PASSWORD="mypassword"
+
+# Project MQTT & Control Configuration
+CONFIG_BROKER_URL="mqtt://100.64.0.1:1883"
+CONFIG_MQTT_TOPIC_PUB="hethong/temp_control"
+CONFIG_MQTT_TOPIC_SUB="hethong/set_from_web"

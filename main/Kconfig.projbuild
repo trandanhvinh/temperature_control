@@ -1,0 +1,21 @@
+menu "Temp Control System Configuration"
+
+    config BROKER_URL
+        string "MQTT Broker URL"
+        default "mqtt://100.64.0.1:1883"
+        help
+            URL of the MQTT broker to connect to (e.g., Tailscale IP or local LAN IP).
+
+    config MQTT_TOPIC_PUB
+        string "MQTT Publish Topic (Telemetry)"
+        default "hethong/temp_control"
+        help
+            MQTT topic where ESP32-S3 publishes temperature, setpoint, PWM, and mode JSON data.
+
+    config MQTT_TOPIC_SUB
+        string "MQTT Subscribe Topic (Setpoint)"
+        default "hethong/set_from_web"
+        help
+            MQTT topic where ESP32-S3 listens for setpoint updates from Node-RED / Web Dashboard.
+
+endmenu

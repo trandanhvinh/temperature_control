@@ -8,12 +8,12 @@
     "--compile-commands-dir=c:\\VSCode\\Temp_Control\\build"
   ],
   "idf.currentSetup": "C:\\esp\\v6.0.1\\esp-idf",
-  "idf.portWin": "COM5",
   "idf.openOcdConfigs": [
     "board/esp32s3-builtin.cfg"
   ],
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32s3"
   },
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "idf.port": "COM5"
 }
