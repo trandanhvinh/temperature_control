@@ -57,9 +57,9 @@ Giải pháp thiết bị biên, ứng dụng hệ điều hành thời gian th�
 
 Hệ thống được thiết kế theo mô hình phân lớp gồm 6 tầng độc lập:
 
-```
 ![Layered Architecture](img/architecture.png)
-```
+
+---
 
 ### Thông số bộ điều khiển PID mặc định
 Được cấu hình trực tiếp trong `main/main.c`:
