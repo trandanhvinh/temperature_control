@@ -1,4 +1,4 @@
-# 🌡️ Hệ thống Điều khiển Nhiệt độ IoT (IoT Temperature Control System)
+# Hệ thống Điều khiển Nhiệt độ IoT (IoT Temperature Control System)
 
 ![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.x%20%7C%20v6.x-blue?logo=espressif)
 ![MCU](https://img.shields.io/badge/MCU-ESP32--S3-red?logo=espressif)
@@ -11,28 +11,28 @@ Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến tr�
 
 ---
 
-## 📸 Mô hình Phần cứng
+## Mô hình Phần cứng
 
 ![Hardware Setup](img/hardware_setup.png)
 
 ---
 
-## ✨ Tính năng Nổi bật
+## Tính năng Nổi bật
 
-* **⚡ Điều khiển thời gian thực đa lõi (Real-time Multicore Control):** Tối ưu hóa kiến trúc 2 nhân Xtensa LX7 của ESP32-S3:
+* **Điều khiển thời gian thực đa lõi (Real-time Multicore Control):** Tối ưu hóa kiến trúc 2 nhân Xtensa LX7 của ESP32-S3:
   * **Core 0 (`Task_Telemetry` & `MQTT_Event`):** Chuyên trách kết nối mạng Wi-Fi, duy trì phiên MQTT và đóng gói chuỗi JSON gửi dữ liệu định kỳ.
   * **Core 1 (`Task_Control`):** Độc lập đọc cảm biến SHT31 qua I2C và tính toán vòng lặp điều khiển PID với chu kỳ lấy mẫu cố định ($\Delta t = 1.0\text{s}$), đảm bảo không bị trễ nhịp bởi tác vụ mạng.
-* **🎯 Thuật toán PID lai vùng biên (Hybrid Zone PID):**
+* **Thuật toán PID lai vùng biên (Hybrid Zone PID):**
   * **Ngoài ngưỡng sai số $\pm 2.0^\circ\text{C}$:** Kích hoạt công suất tối đa ($\pm 4095$) và xóa tích phân để tăng tốc độ đáp ứng nhiệt.
   * **Trong ngưỡng $\pm 2.0^\circ\text{C}$:** Chuyển sang điều khiển PID mịn kết hợp cơ chế **Anti-windup** (giới hạn khâu tích phân trong khoảng $[-200, 200]$) và tự động reset tích phân khi nhiệt độ vượt qua điểm đặt (**Zero-crossing reset**).
 * **🛡️ Bảo vệ phần cứng bất đồng bộ (Non-blocking Protection):**
   * **Chống sốc nhiệt đảo chiều:** Tự động ngắt PWM và đếm lùi an toàn **5 giây** (`REVERSAL_PROTECT_TICKS`) trước khi đảo chiều dòng điện giữa hai trạng thái **NÓNG (HEAT) $\leftrightarrow$ LẠNH (COOL)** mà không gây nghẽn (block) luồng truyền thông.
   * **Cơ chế Fail-safe cảm biến:** Tự động cắt tải PWM về `0` và xóa lỗi tích phân ngay lập tức nếu giao tiếp I2C với cảm biến SHT31 bị gián đoạn.
-* **🔒 Truyền thông tin cậy & Xuyên thấu NAT:** Sử dụng giao thức MQTT với mức **QoS 1** chạy trên nền tảng **Tailscale VPN** (giao thức WireGuard), cấp phát địa chỉ IP tĩnh nội bộ (`100.x.x.x`) cho IoT Gateway.
+* **Truyền thông tin cậy & Xuyên thấu NAT:** Sử dụng giao thức MQTT với mức **QoS 1** chạy trên nền tảng **Tailscale VPN** (giao thức WireGuard), cấp phát địa chỉ IP tĩnh nội bộ (`100.x.x.x`) cho IoT Gateway.
 
 ---
 
-## 🔧 Cấu trúc Phần cứng & Sơ đồ Đấu nối
+## Cấu trúc Phần cứng & Sơ đồ Đấu nối
 
 ### 1. Danh mục linh kiện
 | Thành phần | Thiết bị / Module | Thông số / Vai trò |
@@ -53,7 +53,7 @@ Giải pháp thiết bị biên (**Edge Device**) hoạt động theo kiến tr�
 
 ---
 
-## 🏗️ Kiến trúc Phần mềm
+## Kiến trúc Phần mềm
 
 Hệ thống được thiết kế theo mô hình phân lớp (**Layered Architecture**) gồm 6 tầng độc lập:
 
@@ -84,7 +84,7 @@ Hệ thống được thiết kế theo mô hình phân lớp (**Layered Archite
 
 ---
 
-## 📂 Cấu trúc Thư mục
+## Cấu trúc Thư mục
 
 ```text
 Temp_Control/
@@ -105,7 +105,7 @@ Temp_Control/
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt & Biên dịch
+## Hướng dẫn Cài đặt & Biên dịch
 
 ### 1. Yêu cầu hệ thống
 * **ESP-IDF:** Phiên bản `v5.x` hoặc `v6.x` (Hỗ trợ mở trực tiếp qua Docker Container với `.devcontainer`).
@@ -133,7 +133,7 @@ idf.py -p COMx flash monitor
 
 ---
 
-## 📡 Đặc tả Giao thức MQTT
+## Đặc tả Giao thức MQTT
 
 | Chiều dữ liệu | Topic Mặc định | QoS | Định dạng Payload | Mô tả chi tiết |
 | :--- | :--- | :-: | :--- | :--- |
